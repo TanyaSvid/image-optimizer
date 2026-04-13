@@ -50,7 +50,7 @@
                 <i class="fa-regular fa-image text-green-500 mt-1"></i>
                 <div>
                     <h3 class="font-semibold text-sm">JPEG & PNG</h3>
-                    <p class="text-xs text-gray-500 mt-1">Максимальный размер файла — 10 МБ. Умное сжатие без видимой потери качества.</p>
+                    <p class="text-xs text-gray-500 mt-1">Максимальный размер файла — 20 МБ. Умное сжатие без видимой потери качества.</p>
                 </div>
             </div>
             <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-start gap-3">
@@ -68,13 +68,13 @@
                 <i class="fa-solid fa-cloud-arrow-up text-2xl"></i>
             </div>
             <h2 class="text-lg font-semibold text-gray-700">Перетащите файлы или несколько папок сюда</h2>
-            <p class="text-sm text-gray-500 mt-2 mb-6">Чтобы добавить сразу несколько папок, выделите их на компьютере и перетащите мышкой в это окно.</p>
+            <p class="text-sm text-gray-500 mt-2 mb-6">Чтобы добавить сразу несколько папок, выделите их на компьютере и перетащите мышкой в это окно. <br><span class="inline-block mt-1 px-2 py-1 bg-gray-100 rounded text-gray-600 font-medium">Лимит: до 20 МБ на каждое изображение</span></p>
             
             <div class="flex gap-4 flex-wrap justify-center">
-                <button onclick="document.getElementById('fileInput').click()" class="px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition">
+                <button onclick="event.stopPropagation(); document.getElementById('fileInput').click()" class="px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition">
                     Выбрать файлы
                 </button>
-                <button onclick="document.getElementById('folderInput').click()" class="px-5 py-2.5 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition">
+                <button onclick="event.stopPropagation(); document.getElementById('folderInput').click()" class="px-5 py-2.5 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition">
                     Выбрать папку (по одной)
                 </button>
             </div>
@@ -141,7 +141,7 @@
         const downloadBtn = document.getElementById('downloadBtn');
 
         // State
-        const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+        const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB
         let filesQueue = [];
         let processedFiles = [];
         let totalOriginalSize = 0;
@@ -168,6 +168,11 @@
         });
 
         dropzone.addEventListener('drop', handleDrop, false);
+        
+        // Делаем всю область кликабельной (по умолчанию открывает файлы)
+        dropzone.addEventListener('click', () => {
+            fileInput.click();
+        });
         
         fileInput.addEventListener('change', (e) => {
             handleFiles(Array.from(e.target.files));
@@ -248,7 +253,7 @@
 
             const tooLargeFiles = files.filter(file => file.size > MAX_FILE_SIZE);
             if (tooLargeFiles.length > 0) {
-                alert(`Пропущено ${tooLargeFiles.length} файлов, так как они превышают 10 МБ.`);
+                alert(`Пропущено ${tooLargeFiles.length} файлов, так как они превышают лимит в 20 МБ.`);
             }
 
             if (validFiles.length === 0) return;
