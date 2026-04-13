@@ -57,19 +57,21 @@
 
         <!-- Dropzone -->
         <div id="dropzone" onclick="document.getElementById('fileInput').click()" class="border-2 border-dashed border-gray-300 rounded-2xl p-10 text-center bg-white transition-all duration-200 hover:border-blue-400 hover:bg-blue-50/50 cursor-pointer flex flex-col items-center justify-center min-h-[220px]">
-            <div class="bg-blue-50 text-blue-500 rounded-full w-16 h-16 flex items-center justify-center mb-4">
+            <div class="bg-blue-50 text-blue-500 rounded-full w-16 h-16 flex items-center justify-center mb-4 pointer-events-none">
                 <i class="fa-solid fa-cloud-arrow-up text-2xl"></i>
             </div>
             <h2 class="text-lg font-semibold text-gray-700 pointer-events-none">Перетащите файлы или папки сюда</h2>
             <p class="text-sm text-gray-500 mt-2 mb-6 pointer-events-none">Чтобы добавить сразу несколько папок, выделите их на компьютере и перетащите мышкой в это окно. <br><span class="inline-block mt-2 px-2 py-1 bg-gray-100 rounded text-gray-600 font-medium">Лимит: до 20 МБ на изображение</span></p>
             
-            <div class="flex gap-4 flex-wrap justify-center">
-                <button onclick="event.stopPropagation(); document.getElementById('fileInput').click()" class="px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition shadow-sm">
+            <div class="flex gap-3 flex-wrap justify-center items-center">
+                <!-- Первичная кнопка (Файлы) -->
+                <label for="fileInput" onclick="event.stopPropagation()" class="px-6 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition shadow-sm cursor-pointer m-0">
                     Выбрать файлы
-                </button>
-                <button onclick="event.stopPropagation(); document.getElementById('folderInput').click()" class="px-5 py-2.5 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition shadow-sm">
-                    Выбрать папку (по одной)
-                </button>
+                </label>
+                <!-- Второстепенная кнопка (Папки) - визуально облегчена -->
+                <label for="folderInput" onclick="event.stopPropagation()" class="px-4 py-2 text-gray-500 hover:text-gray-800 hover:bg-gray-100 text-sm font-medium rounded-lg transition cursor-pointer m-0">
+                    Выбрать папку
+                </label>
             </div>
             
             <p class="text-xs text-gray-400 mt-5 max-w-md mx-auto pointer-events-none">
