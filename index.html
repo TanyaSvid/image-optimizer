@@ -94,9 +94,12 @@
                 </div>
             </div>
             
-            <div class="flex items-center gap-3 w-full sm:w-auto">
-                <button id="clearBtn" onclick="clearAll()" title="Начать заново" class="w-full sm:w-auto px-4 py-2.5 bg-white border border-gray-200 text-gray-600 hover:text-blue-600 hover:border-blue-300 hover:bg-blue-50 rounded-lg text-sm font-medium transition flex items-center justify-center gap-2 shadow-sm">
-                    <i class="fa-solid fa-rotate-right"></i> Заново
+            <div class="flex items-center gap-3 w-full sm:w-auto flex-wrap sm:flex-nowrap justify-end">
+                <button id="deleteSelectedBtn" onclick="deleteSelected()" class="hidden w-full sm:w-auto px-4 py-2.5 bg-red-50 border border-red-200 text-red-600 hover:bg-red-100 rounded-lg text-sm font-medium transition flex items-center justify-center gap-2 shadow-sm">
+                    <i class="fa-solid fa-trash-can"></i> Удалить выбранные (<span id="selectedCount">0</span>)
+                </button>
+                <button id="clearBtn" onclick="clearAll()" title="Очистить всё" class="w-full sm:w-auto px-4 py-2.5 bg-white border border-gray-200 text-gray-600 hover:text-red-600 hover:border-red-300 hover:bg-red-50 rounded-lg text-sm font-medium transition flex items-center justify-center gap-2 shadow-sm">
+                    <i class="fa-solid fa-trash-can"></i> Очистить всё
                 </button>
                 <button id="downloadBtn" disabled class="w-full sm:w-auto px-6 py-2.5 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-sm">
                     <i class="fa-solid fa-file-zipper"></i> Скачать ZIP
@@ -110,12 +113,15 @@
                 <table class="w-full text-left text-sm whitespace-nowrap">
                     <thead class="bg-gray-50 text-gray-600 border-b border-gray-100">
                         <tr>
+                            <th class="px-4 py-3 font-medium w-12 text-center">
+                                <input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll()" class="w-4 h-4 rounded border-gray-300 cursor-pointer accent-blue-600">
+                            </th>
                             <th class="px-4 py-3 font-medium">Имя файла / Путь</th>
                             <th class="px-4 py-3 font-medium">Оригинал</th>
                             <th class="px-4 py-3 font-medium">Сжато</th>
                             <th class="px-4 py-3 font-medium">Экономия</th>
                             <th class="px-4 py-3 font-medium text-right">Статус</th>
-                            <th class="px-4 py-3 font-medium w-10 text-center"><i class="fa-solid fa-trash-can text-gray-400"></i></th>
+                            <th class="px-4 py-3 font-medium w-10 text-center"></th> <!-- Пустое место для крестиков -->
                         </tr>
                     </thead>
                     <tbody id="fileList" class="divide-y divide-gray-50">
@@ -176,6 +182,44 @@
         // По умолчанию агрессивный режим "как TinyPNG"
         let currentCompressMode = 'tiny'; 
 
+        // --- Управление множественным выбором ---
+        function toggleSelectAll() {
+            const master = document.getElementById('selectAllCheckbox');
+            const checkboxes = document.querySelectorAll('.file-checkbox');
+            checkboxes.forEach(cb => cb.checked = master.checked);
+            updateSelectionState();
+        }
+
+        function updateSelectionState() {
+            const checkboxes = document.querySelectorAll('.file-checkbox:checked');
+            const allCheckboxes = document.querySelectorAll('.file-checkbox');
+            const deleteSelectedBtn = document.getElementById('deleteSelectedBtn');
+            const selectedCountSpan = document.getElementById('selectedCount');
+            const master = document.getElementById('selectAllCheckbox');
+
+            if (allCheckboxes.length > 0) {
+                master.checked = checkboxes.length === allCheckboxes.length;
+            } else {
+                master.checked = false;
+            }
+
+            if (checkboxes.length > 0) {
+                deleteSelectedBtn.classList.remove('hidden');
+                selectedCountSpan.textContent = checkboxes.length;
+            } else {
+                deleteSelectedBtn.classList.add('hidden');
+            }
+        }
+
+        function deleteSelected() {
+            const checkboxes = document.querySelectorAll('.file-checkbox:checked');
+            checkboxes.forEach(cb => {
+                removeFile(cb.value);
+            });
+            document.getElementById('selectAllCheckbox').checked = false;
+            updateSelectionState();
+        }
+
         // --- Функция Очистки (Начать заново) ---
         function clearAll() {
             // Помечаем все файлы как удаленные, чтобы мгновенно прервать фоновую обработку
@@ -198,6 +242,8 @@
             actionArea.classList.add('hidden');
             fileListContainer.classList.add('hidden');
             downloadBtn.disabled = true;
+            document.getElementById('selectAllCheckbox').checked = false;
+            updateSelectionState();
             
             // Сбрасываем inputs
             fileInput.value = '';
@@ -226,6 +272,7 @@
             if (row) row.remove();
 
             updateCounters();
+            updateSelectionState();
         }
 
         // --- Обновление счетчиков ---
@@ -373,6 +420,7 @@
             });
 
             updateCounters();
+            updateSelectionState();
             processQueue();
         }
 
@@ -557,6 +605,9 @@
             tr.id = `row-${id}`;
             tr.className = "hover:bg-gray-50 transition-colors";
             tr.innerHTML = `
+                <td class="px-4 py-3 text-center">
+                    <input type="checkbox" value="${id}" class="file-checkbox w-4 h-4 rounded border-gray-300 cursor-pointer accent-blue-600" onchange="updateSelectionState()">
+                </td>
                 <td class="px-4 py-3">
                     <div class="flex items-center gap-2">
                         <i class="fa-regular ${file.type === 'image/png' ? 'fa-image' : 'fa-image'} text-gray-400"></i>
