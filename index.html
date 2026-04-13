@@ -43,33 +43,8 @@
     <!-- Main Content -->
     <main class="flex-grow max-w-6xl w-full mx-auto p-6 flex flex-col gap-6">
         
-        <!-- Info Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-start gap-3">
-                <i class="fa-regular fa-folder-open text-blue-500 mt-1"></i>
-                <div>
-                    <h3 class="font-semibold text-sm">Поддержка папок</h3>
-                    <p class="text-xs text-gray-500 mt-1">Перетаскивайте папки целиком. Структура сохранится в ZIP-архиве при скачивании.</p>
-                </div>
-            </div>
-            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-start gap-3">
-                <i class="fa-regular fa-image text-green-500 mt-1"></i>
-                <div>
-                    <h3 class="font-semibold text-sm">Супер-сжатие</h3>
-                    <p class="text-xs text-gray-500 mt-1">Экономия до 90%. Умное сокращение палитры PNG и оптимизация JPEG.</p>
-                </div>
-            </div>
-            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-start gap-3">
-                <i class="fa-solid fa-bolt text-yellow-500 mt-1"></i>
-                <div>
-                    <h3 class="font-semibold text-sm">Быстро и безопасно</h3>
-                    <p class="text-xs text-gray-500 mt-1">Ваши файлы не покидают браузер. Полная конфиденциальность.</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Настройки сжатия -->
-        <div class="flex justify-center mt-2">
+        <!-- Настройки сжатия (Перенесены на самый верх) -->
+        <div class="flex justify-center mt-2 mb-2">
             <div class="bg-gray-200/60 p-1 rounded-xl inline-flex relative shadow-inner">
                 <button onclick="setMode('tiny')" id="btnTiny" class="px-5 py-2.5 bg-white text-gray-800 rounded-lg shadow-sm text-sm font-semibold transition-all duration-200 flex items-center gap-2">
                     🔥 Максимальное (-90%)
@@ -118,9 +93,15 @@
                     <span id="totalSaved" class="font-bold text-green-600">0 MB</span>
                 </div>
             </div>
-            <button id="downloadBtn" disabled class="w-full sm:w-auto px-6 py-2.5 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
-                <i class="fa-solid fa-file-zipper"></i> Скачать ZIP
-            </button>
+            
+            <div class="flex items-center gap-3 w-full sm:w-auto">
+                <button id="clearBtn" onclick="clearAll()" class="w-full sm:w-auto px-4 py-2.5 text-gray-500 hover:text-red-500 hover:bg-red-50 rounded-lg text-sm font-medium transition flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-trash-can"></i> Очистить
+                </button>
+                <button id="downloadBtn" disabled class="w-full sm:w-auto px-6 py-2.5 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-sm">
+                    <i class="fa-solid fa-file-zipper"></i> Скачать ZIP
+                </button>
+            </div>
         </div>
 
         <!-- File List -->
@@ -140,6 +121,31 @@
                         <!-- Rows will be injected here -->
                     </tbody>
                 </table>
+            </div>
+        </div>
+
+        <!-- Info Cards (Опущены вниз экрана) -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-8 opacity-70 hover:opacity-100 transition-opacity duration-300">
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-start gap-3">
+                <i class="fa-regular fa-folder-open text-blue-500 mt-1"></i>
+                <div>
+                    <h3 class="font-semibold text-sm">Поддержка папок</h3>
+                    <p class="text-xs text-gray-500 mt-1">Перетаскивайте папки целиком. Структура сохранится в ZIP-архиве при скачивании.</p>
+                </div>
+            </div>
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-start gap-3">
+                <i class="fa-regular fa-image text-green-500 mt-1"></i>
+                <div>
+                    <h3 class="font-semibold text-sm">Супер-сжатие</h3>
+                    <p class="text-xs text-gray-500 mt-1">Экономия до 90%. Умное сокращение палитры PNG и оптимизация JPEG.</p>
+                </div>
+            </div>
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-start gap-3">
+                <i class="fa-solid fa-bolt text-yellow-500 mt-1"></i>
+                <div>
+                    <h3 class="font-semibold text-sm">Быстро и безопасно</h3>
+                    <p class="text-xs text-gray-500 mt-1">Ваши файлы не покидают браузер. Полная конфиденциальность.</p>
+                </div>
             </div>
         </div>
 
@@ -168,6 +174,36 @@
         
         // По умолчанию агрессивный режим "как TinyPNG"
         let currentCompressMode = 'tiny'; 
+
+        // --- Функция Очистки (Начать заново) ---
+        function clearAll() {
+            if (isProcessing) {
+                alert("Пожалуйста, дождитесь окончания текущей оптимизации.");
+                return;
+            }
+            
+            // Обнуляем переменные
+            filesQueue = [];
+            processedFiles = [];
+            totalOriginalSize = 0;
+            totalOptimizedSize = 0;
+            zip = new JSZip();
+            
+            // Очищаем DOM
+            fileList.innerHTML = '';
+            processedCountEl.textContent = '0';
+            totalCountEl.textContent = '0';
+            totalSavedEl.textContent = '0 B';
+            
+            // Скрываем элементы
+            actionArea.classList.add('hidden');
+            fileListContainer.classList.add('hidden');
+            downloadBtn.disabled = true;
+            
+            // Сбрасываем inputs
+            fileInput.value = '';
+            folderInput.value = '';
+        }
 
         // --- Управление режимами сжатия ---
         function setMode(mode) {
@@ -370,8 +406,6 @@
                     try {
                         const canvas = document.createElement('canvas');
                         
-                        // Секретное оружие для огромных картинок (как маркетплейсы любят)
-                        // Если картинка больше 3000px, чуть ужимаем разрешение для макс. экономии веса
                         let targetWidth = img.width;
                         let targetHeight = img.height;
                         const MAX_DIM = 3000;
@@ -390,7 +424,6 @@
                         canvas.height = targetHeight;
                         const ctx = canvas.getContext('2d');
                         
-                        // Высокое качество интерполяции при изменении размера
                         ctx.imageSmoothingEnabled = true;
                         ctx.imageSmoothingQuality = 'high';
                         ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
@@ -401,7 +434,6 @@
 
                         if (typeof imageQ !== 'undefined') {
                             const pointContainer = imageQ.utils.PointContainer.fromUint8Array(imgData.data, canvas.width, canvas.height);
-                            // Создаем палитру (128 цветов для режима Tiny дает огромную экономию)
                             const palette = imageQ.buildPaletteSync([pointContainer], { colors: colorCount });
                             const outPointContainer = imageQ.applyPaletteSync(pointContainer, palette, { imageQuantization: 'floyd-steinberg' });
                             
