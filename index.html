@@ -81,22 +81,29 @@
         </div>
 
         <!-- Dropzone -->
-        <div id="dropzone" onclick="openUploadModal()" class="border-2 border-dashed border-gray-300 rounded-2xl p-10 text-center bg-white transition-all duration-200 hover:border-blue-400 hover:bg-blue-50/50 cursor-pointer flex flex-col items-center justify-center min-h-[220px]">
+        <div id="dropzone" onclick="document.getElementById('fileInput').click()" class="border-2 border-dashed border-gray-300 rounded-2xl p-10 text-center bg-white transition-all duration-200 hover:border-blue-400 hover:bg-blue-50/50 cursor-pointer flex flex-col items-center justify-center min-h-[220px]">
             <div class="bg-blue-50 text-blue-500 rounded-full w-16 h-16 flex items-center justify-center mb-4">
                 <i class="fa-solid fa-cloud-arrow-up text-2xl"></i>
             </div>
             <h2 class="text-lg font-semibold text-gray-700 pointer-events-none">Перетащите файлы или папки сюда</h2>
             <p class="text-sm text-gray-500 mt-2 mb-6 pointer-events-none">Чтобы добавить сразу несколько папок, выделите их на компьютере и перетащите мышкой в это окно. <br><span class="inline-block mt-2 px-2 py-1 bg-gray-100 rounded text-gray-600 font-medium">Лимит: до 20 МБ на изображение</span></p>
             
-            <div class="flex gap-4 flex-wrap justify-center pointer-events-none">
-                <span class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg shadow-sm transition">
-                    Нажмите для выбора
-                </span>
+            <div class="flex gap-4 flex-wrap justify-center">
+                <button onclick="event.stopPropagation(); document.getElementById('fileInput').click()" class="px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition shadow-sm">
+                    Выбрать файлы
+                </button>
+                <button onclick="event.stopPropagation(); document.getElementById('folderInput').click()" class="px-5 py-2.5 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition shadow-sm">
+                    Выбрать папку (по одной)
+                </button>
             </div>
             
             <p class="text-xs text-gray-400 mt-5 max-w-md mx-auto pointer-events-none">
-                Примечание: клик в любом пустом месте этого окна откроет меню быстрого выбора.
+                Примечание: клик в любом пустом месте этого окна откроет выбор файлов.
             </p>
+
+            <!-- Hidden inputs -->
+            <input type="file" id="fileInput" multiple accept="image/jpeg, image/png" class="hidden">
+            <input type="file" id="folderInput" webkitdirectory directory multiple class="hidden">
         </div>
 
         <!-- Progress & Actions -->
@@ -138,41 +145,6 @@
 
     </main>
 
-    <!-- Модальное окно выбора загрузки (С лейблами для обхода защиты браузера) -->
-    <div id="uploadModal" onclick="closeUploadModal()" class="hidden fixed inset-0 z-50 bg-gray-900/40 backdrop-blur-sm items-center justify-center p-4 opacity-0 transition-opacity duration-200">
-        <div onclick="event.stopPropagation()" class="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm transform scale-95 transition-transform duration-200" id="uploadModalContent">
-            <div class="flex justify-between items-center mb-5">
-                <h3 class="text-lg font-bold text-gray-800">Что загружаем?</h3>
-                <button onclick="closeUploadModal()" class="text-gray-400 hover:text-gray-600 transition">
-                    <i class="fa-solid fa-xmark text-xl"></i>
-                </button>
-            </div>
-            <div class="flex flex-col gap-3">
-                <label class="w-full p-4 bg-blue-50 hover:bg-blue-100 text-blue-700 font-semibold rounded-xl transition flex items-center justify-start gap-4 border border-blue-200 cursor-pointer shadow-sm">
-                    <input type="file" id="fileInput" multiple accept="image/jpeg, image/png" class="hidden">
-                    <div class="bg-blue-600 text-white rounded-full w-10 h-10 flex items-center justify-center flex-shrink-0">
-                        <i class="fa-regular fa-file-image"></i>
-                    </div>
-                    <div class="text-left">
-                        <div class="text-base">Отдельные файлы</div>
-                        <div class="text-xs font-normal text-blue-500/80">Выбрать картинки</div>
-                    </div>
-                </label>
-                
-                <label class="w-full p-4 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold rounded-xl transition flex items-center justify-start gap-4 border border-indigo-200 cursor-pointer shadow-sm">
-                    <input type="file" id="folderInput" webkitdirectory directory class="hidden">
-                    <div class="bg-indigo-600 text-white rounded-full w-10 h-10 flex items-center justify-center flex-shrink-0">
-                        <i class="fa-solid fa-folder-open"></i>
-                    </div>
-                    <div class="text-left">
-                        <div class="text-base">Папку целиком</div>
-                        <div class="text-xs font-normal text-indigo-500/80">Сохранит структуру папок</div>
-                    </div>
-                </label>
-            </div>
-        </div>
-    </div>
-
     <script>
         // DOM Elements
         const dropzone = document.getElementById('dropzone');
@@ -185,8 +157,6 @@
         const totalCountEl = document.getElementById('totalCount');
         const totalSavedEl = document.getElementById('totalSaved');
         const downloadBtn = document.getElementById('downloadBtn');
-        const uploadModal = document.getElementById('uploadModal');
-        const uploadModalContent = document.getElementById('uploadModalContent');
 
         // State
         const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB
@@ -214,27 +184,6 @@
             }
         }
 
-        // --- Управление модальным окном ---
-        function openUploadModal() {
-            uploadModal.classList.remove('hidden');
-            uploadModal.classList.add('flex');
-            setTimeout(() => {
-                uploadModal.classList.remove('opacity-0');
-                uploadModalContent.classList.remove('scale-95');
-                uploadModalContent.classList.add('scale-100');
-            }, 10);
-        }
-
-        function closeUploadModal() {
-            uploadModal.classList.add('opacity-0');
-            uploadModalContent.classList.remove('scale-100');
-            uploadModalContent.classList.add('scale-95');
-            setTimeout(() => {
-                uploadModal.classList.add('hidden');
-                uploadModal.classList.remove('flex');
-            }, 200);
-        }
-
         // --- Event Listeners for Drag & Drop ---
         ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
             dropzone.addEventListener(eventName, preventDefaults, false);
@@ -257,13 +206,11 @@
         dropzone.addEventListener('drop', handleDrop, false);
         
         fileInput.addEventListener('change', (e) => {
-            closeUploadModal();
             handleFiles(Array.from(e.target.files));
             e.target.value = ''; 
         });
         
         folderInput.addEventListener('change', (e) => {
-            closeUploadModal();
             const files = Array.from(e.target.files).map(f => {
                 f.customPath = f.webkitRelativePath; 
                 return f;
