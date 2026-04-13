@@ -7,6 +7,11 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- Добавлены библиотеки для умного сжатия PNG (как в TinyPNG) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/1.0.11/pako.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/upng-js@2.1.0/UPNG.min.js"></script>
+
     <style>
         .drag-active {
             border-color: #3b82f6;
@@ -297,19 +302,21 @@
         async function optimizeFile(file) {
             const id = file.uiId;
             updateRowStatus(id, 'loading');
+            
+            // Даем интерфейсу обновиться перед тяжелой задачей сжатия
+            await new Promise(resolve => setTimeout(resolve, 50)); 
 
             try {
                 let optimizedBlob;
-                // Optimization logic based on type
+                
                 if (file.type === 'image/jpeg') {
                     optimizedBlob = await compressImageToCanvas(file, 'image/jpeg', 0.8);
                 } else if (file.type === 'image/png') {
-                    // For PNG, Canvas sometimes makes it bigger. 
-                    // We try to compress, but if it's larger, we keep the original.
-                    optimizedBlob = await compressImageToCanvas(file, 'image/png', null);
+                    // Используем новый продвинутый алгоритм для PNG
+                    optimizedBlob = await compressPNGWithUPNG(file);
                 }
 
-                // If compression made it larger (common with small PNGs), use original
+                // Если вдруг сжатый файл оказался больше оригинала (очень редко, но бывает)
                 if (optimizedBlob.size >= file.size) {
                     optimizedBlob = file;
                 }
@@ -332,7 +339,32 @@
             }
         }
 
-        // Image compression using HTML Canvas
+        // --- Умное сжатие PNG (алгоритм как у TinyPNG) ---
+        async function compressPNGWithUPNG(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        // 1. Декодируем исходный PNG файл
+                        const img = UPNG.decode(e.target.result);
+                        // 2. Получаем сырые пиксели
+                        const rgba = UPNG.toRGBA8(img)[0];
+                        // 3. Кодируем обратно с потерей данных (ограничиваем до 256 цветов)
+                        // Это дает экстремальное сжатие без видимой потери качества
+                        const compressed = UPNG.encode([rgba], img.width, img.height, 256);
+                        
+                        resolve(new Blob([compressed], { type: 'image/png' }));
+                    } catch(err) {
+                        console.error("Ошибка при сжатии PNG:", err);
+                        resolve(file); // Если алгоритм не справился, безопасно возвращаем оригинал
+                    }
+                };
+                reader.onerror = () => resolve(file);
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+        // --- Стандартное сжатие JPEG через Canvas ---
         function compressImageToCanvas(file, mimeType, quality) {
             return new Promise((resolve, reject) => {
                 const img = new Image();
