@@ -95,8 +95,8 @@
             </div>
             
             <div class="flex items-center gap-3 w-full sm:w-auto">
-                <button id="clearBtn" onclick="clearAll()" class="w-full sm:w-auto px-4 py-2.5 text-gray-500 hover:text-red-500 hover:bg-red-50 rounded-lg text-sm font-medium transition flex items-center justify-center gap-2">
-                    <i class="fa-solid fa-trash-can"></i> Очистить
+                <button id="clearBtn" onclick="clearAll()" title="Начать заново" class="w-full sm:w-auto px-4 py-2.5 bg-white border border-gray-200 text-gray-600 hover:text-blue-600 hover:border-blue-300 hover:bg-blue-50 rounded-lg text-sm font-medium transition flex items-center justify-center gap-2 shadow-sm">
+                    <i class="fa-solid fa-rotate-right"></i> Заново
                 </button>
                 <button id="downloadBtn" disabled class="w-full sm:w-auto px-6 py-2.5 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-sm">
                     <i class="fa-solid fa-file-zipper"></i> Скачать ZIP
@@ -115,6 +115,7 @@
                             <th class="px-4 py-3 font-medium">Сжато</th>
                             <th class="px-4 py-3 font-medium">Экономия</th>
                             <th class="px-4 py-3 font-medium text-right">Статус</th>
+                            <th class="px-4 py-3 font-medium w-10 text-center"><i class="fa-solid fa-trash-can text-gray-400"></i></th>
                         </tr>
                     </thead>
                     <tbody id="fileList" class="divide-y divide-gray-50">
@@ -177,10 +178,8 @@
 
         // --- Функция Очистки (Начать заново) ---
         function clearAll() {
-            if (isProcessing) {
-                alert("Пожалуйста, дождитесь окончания текущей оптимизации.");
-                return;
-            }
+            // Помечаем все файлы как удаленные, чтобы мгновенно прервать фоновую обработку
+            filesQueue.forEach(f => f.isDeleted = true);
             
             // Обнуляем переменные
             filesQueue = [];
@@ -203,6 +202,50 @@
             // Сбрасываем inputs
             fileInput.value = '';
             folderInput.value = '';
+        }
+
+        // --- Функция удаления одного файла ---
+        function removeFile(id) {
+            const fileObj = filesQueue.find(f => f.uiId === id);
+            if (!fileObj) return;
+
+            fileObj.isDeleted = true; // Отменяем обработку, если она еще не началась
+
+            // Если файл уже обработан, вычитаем его размеры из общих счетчиков
+            if (processedFiles.includes(fileObj)) {
+                totalOriginalSize -= fileObj.size;
+                totalOptimizedSize -= (fileObj.optimizedSize || fileObj.size);
+
+                let filePath = fileObj.customPath || fileObj.webkitRelativePath || fileObj.name;
+                if(filePath.startsWith('/')) filePath = filePath.substring(1);
+                zip.remove(filePath); // Удаляем из ZIP-архива
+            }
+
+            // Удаляем строку из таблицы
+            const row = document.getElementById(`row-${id}`);
+            if (row) row.remove();
+
+            updateCounters();
+        }
+
+        // --- Обновление счетчиков ---
+        function updateCounters() {
+            const validQueue = filesQueue.filter(f => !f.isDeleted);
+            const validProcessed = processedFiles.filter(f => !f.isDeleted);
+
+            totalCountEl.textContent = validQueue.length;
+            processedCountEl.textContent = validProcessed.length;
+
+            const savedBytes = totalOriginalSize - totalOptimizedSize;
+            totalSavedEl.textContent = formatBytes(savedBytes > 0 ? savedBytes : 0);
+
+            if (validQueue.length === 0) {
+                clearAll(); // Если удалили всё вручную по одному — скрываем панель полностью
+            } else if (validProcessed.length === validQueue.length) {
+                downloadBtn.disabled = false;
+            } else {
+                downloadBtn.disabled = true;
+            }
         }
 
         // --- Управление режимами сжатия ---
@@ -321,15 +364,15 @@
             fileListContainer.classList.remove('hidden');
 
             filesQueue.push(...validFiles);
-            totalCountEl.textContent = filesQueue.length;
-            downloadBtn.disabled = true; 
             
             validFiles.forEach(file => {
                 const id = Math.random().toString(36).substr(2, 9);
                 file.uiId = id;
+                file.isDeleted = false; // Добавляем флаг удаления
                 renderFileRow(file, id);
             });
 
+            updateCounters();
             processQueue();
         }
 
@@ -340,15 +383,18 @@
 
             while (processedFiles.length < filesQueue.length) {
                 const file = filesQueue[processedFiles.length];
+                
+                // Если пользователь удалил файл, пока тот был в очереди - пропускаем его
+                if (file.isDeleted) {
+                    processedFiles.push(file);
+                    continue;
+                }
+
                 await optimizeFile(file);
                 processedFiles.push(file);
-                processedCountEl.textContent = processedFiles.length;
-                
-                const savedBytes = totalOriginalSize - totalOptimizedSize;
-                totalSavedEl.textContent = formatBytes(savedBytes > 0 ? savedBytes : 0);
+                updateCounters();
             }
             
-            downloadBtn.disabled = false;
             isProcessing = false;
         }
 
@@ -376,10 +422,14 @@
                     optimizedBlob = await compressPNGWithTinyPngLogic(file, pngColors);
                 }
 
+                // Прерываем сохранение, если пользователь удалил файл во время сжатия
+                if (file.isDeleted) return;
+
                 if (optimizedBlob.size >= file.size) {
                     optimizedBlob = file;
                 }
 
+                file.optimizedSize = optimizedBlob.size; // Сохраняем финальный вес для корректного удаления потом
                 totalOriginalSize += file.size;
                 totalOptimizedSize += optimizedBlob.size;
 
@@ -390,6 +440,7 @@
 
                 updateRowSuccess(id, file.size, optimizedBlob.size);
             } catch (error) {
+                if (file.isDeleted) return;
                 console.error("Error optimizing file:", error);
                 updateRowStatus(id, 'error');
             }
@@ -517,6 +568,11 @@
                 <td class="px-4 py-3" id="saving-${id}">-</td>
                 <td class="px-4 py-3 text-right" id="status-${id}">
                     <span class="text-gray-400"><i class="fa-solid fa-clock"></i> В очереди</span>
+                </td>
+                <td class="px-4 py-3 text-center">
+                    <button onclick="removeFile('${id}')" title="Удалить файл" class="text-gray-300 hover:text-red-500 transition p-1.5 rounded-lg hover:bg-red-50">
+                        <i class="fa-solid fa-xmark text-lg"></i>
+                    </button>
                 </td>
             `;
             fileList.appendChild(tr);
