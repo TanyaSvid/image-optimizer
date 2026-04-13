@@ -63,12 +63,13 @@
         </div>
 
         <!-- Dropzone -->
-        <div id="dropzone" class="border-2 border-dashed border-gray-300 rounded-2xl p-12 text-center bg-white transition-all duration-200 hover:border-blue-400 cursor-pointer flex flex-col items-center justify-center min-h-[250px]">
+        <!-- Добавлен onclick на всю область dropzone -->
+        <div id="dropzone" onclick="document.getElementById('fileInput').click()" class="border-2 border-dashed border-gray-300 rounded-2xl p-12 text-center bg-white transition-all duration-200 hover:border-blue-400 hover:bg-blue-50/50 cursor-pointer flex flex-col items-center justify-center min-h-[250px]">
             <div class="bg-blue-50 text-blue-500 rounded-full w-16 h-16 flex items-center justify-center mb-4">
                 <i class="fa-solid fa-cloud-arrow-up text-2xl"></i>
             </div>
             <h2 class="text-lg font-semibold text-gray-700">Перетащите файлы или несколько папок сюда</h2>
-            <p class="text-sm text-gray-500 mt-2 mb-6">Чтобы добавить сразу несколько папок, выделите их на компьютере и перетащите мышкой в это окно. <br><span class="inline-block mt-1 px-2 py-1 bg-gray-100 rounded text-gray-600 font-medium">Лимит: до 20 МБ на каждое изображение</span></p>
+            <p class="text-sm text-gray-500 mt-2 mb-6 pointer-events-none">Чтобы добавить сразу несколько папок, выделите их на компьютере и перетащите мышкой в это окно. <br><span class="inline-block mt-1 px-2 py-1 bg-gray-100 rounded text-gray-600 font-medium">Лимит: до 20 МБ на каждое изображение</span></p>
             
             <div class="flex gap-4 flex-wrap justify-center">
                 <button onclick="event.stopPropagation(); document.getElementById('fileInput').click()" class="px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition">
@@ -79,8 +80,8 @@
                 </button>
             </div>
             
-            <p class="text-xs text-gray-400 mt-5 max-w-md mx-auto">
-                Примечание: Системное окно браузера позволяет выбрать только 1 папку за раз. Но вы можете нажимать кнопку несколько раз, чтобы добавить разные папки в общую очередь.
+            <p class="text-xs text-gray-400 mt-5 max-w-md mx-auto pointer-events-none">
+                Примечание: клик в любом месте окна откроет выбор файлов. Чтобы выбрать целую папку — используйте правую кнопку.
             </p>
             
             <!-- Hidden inputs -->
@@ -169,11 +170,6 @@
 
         dropzone.addEventListener('drop', handleDrop, false);
         
-        // Делаем всю область кликабельной (по умолчанию открывает файлы)
-        dropzone.addEventListener('click', () => {
-            fileInput.click();
-        });
-        
         fileInput.addEventListener('change', (e) => {
             handleFiles(Array.from(e.target.files));
             e.target.value = ''; // Сбрасываем значение, чтобы можно было выбрать те же файлы снова
@@ -245,7 +241,7 @@
         }
 
         function handleFiles(files) {
-            // Filter files: only images, under 10MB
+            // Filter files: only images, under 20MB
             const validFiles = files.filter(file => {
                 const isValidType = file.type === 'image/jpeg' || file.type === 'image/png';
                 return isValidType;
