@@ -68,7 +68,6 @@
         </div>
 
         <!-- Dropzone -->
-        <!-- Добавлен onclick на всю область dropzone -->
         <div id="dropzone" onclick="document.getElementById('fileInput').click()" class="border-2 border-dashed border-gray-300 rounded-2xl p-12 text-center bg-white transition-all duration-200 hover:border-blue-400 hover:bg-blue-50/50 cursor-pointer flex flex-col items-center justify-center min-h-[250px]">
             <div class="bg-blue-50 text-blue-500 rounded-full w-16 h-16 flex items-center justify-center mb-4">
                 <i class="fa-solid fa-cloud-arrow-up text-2xl"></i>
@@ -94,7 +93,7 @@
             <input type="file" id="folderInput" webkitdirectory directory multiple class="hidden">
         </div>
 
-        <!-- Progress & Actions (Hidden by default) -->
+        <!-- Progress & Actions -->
         <div id="actionArea" class="hidden bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col sm:flex-row justify-between items-center gap-4">
             <div class="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-start">
                 <div class="text-sm">
@@ -177,17 +176,16 @@
         
         fileInput.addEventListener('change', (e) => {
             handleFiles(Array.from(e.target.files));
-            e.target.value = ''; // Сбрасываем значение, чтобы можно было выбрать те же файлы снова
+            e.target.value = ''; 
         });
         
         folderInput.addEventListener('change', (e) => {
-            // folderInput maintains webkitRelativePath
             const files = Array.from(e.target.files).map(f => {
-                f.customPath = f.webkitRelativePath; // Save relative path
+                f.customPath = f.webkitRelativePath; 
                 return f;
             });
             handleFiles(files);
-            e.target.value = ''; // Сбрасываем значение, чтобы можно было выбрать папку снова
+            e.target.value = ''; 
         });
 
         // --- Core Logic ---
@@ -197,7 +195,6 @@
             const files = [];
 
             if (items) {
-                // Use FileSystem API to read folders recursively
                 const promises = [];
                 for (let i = 0; i < items.length; i++) {
                     const item = items[i];
@@ -209,23 +206,19 @@
                     }
                 }
                 const results = await Promise.all(promises);
-                // Flatten array of arrays
                 results.forEach(res => files.push(...res));
             } else {
-                // Fallback for older browsers
                 files.push(...e.dataTransfer.files);
             }
 
             handleFiles(files);
         }
 
-        // Recursive function to read directories
         function traverseFileTree(item, path) {
             return new Promise((resolve) => {
                 path = path || "";
                 if (item.isFile) {
                     item.file((file) => {
-                        // Attach the relative path to the file object so we can use it in ZIP
                         file.customPath = path;
                         resolve([file]);
                     });
@@ -246,10 +239,8 @@
         }
 
         function handleFiles(files) {
-            // Filter files: only images, under 20MB
             const validFiles = files.filter(file => {
-                const isValidType = file.type === 'image/jpeg' || file.type === 'image/png';
-                return isValidType;
+                return file.type === 'image/jpeg' || file.type === 'image/png';
             });
 
             const tooLargeFiles = files.filter(file => file.size > MAX_FILE_SIZE);
@@ -259,22 +250,19 @@
 
             if (validFiles.length === 0) return;
 
-            // Show UI elements
             actionArea.classList.remove('hidden');
             fileListContainer.classList.remove('hidden');
 
             filesQueue.push(...validFiles);
             totalCountEl.textContent = filesQueue.length;
-            downloadBtn.disabled = true; // Disable download while processing new batch
+            downloadBtn.disabled = true; 
             
-            // Render rows
             validFiles.forEach(file => {
                 const id = Math.random().toString(36).substr(2, 9);
                 file.uiId = id;
                 renderFileRow(file, id);
             });
 
-            // Start processing queue if not already running
             processQueue();
         }
 
@@ -289,12 +277,10 @@
                 processedFiles.push(file);
                 processedCountEl.textContent = processedFiles.length;
                 
-                // Update total saved
                 const savedBytes = totalOriginalSize - totalOptimizedSize;
                 totalSavedEl.textContent = formatBytes(savedBytes > 0 ? savedBytes : 0);
             }
             
-            // Processing complete
             downloadBtn.disabled = false;
             isProcessing = false;
         }
@@ -303,7 +289,7 @@
             const id = file.uiId;
             updateRowStatus(id, 'loading');
             
-            // Даем интерфейсу обновиться перед тяжелой задачей сжатия
+            // Даем интерфейсу обновиться перед тяжелой задачей
             await new Promise(resolve => setTimeout(resolve, 50)); 
 
             try {
@@ -312,11 +298,10 @@
                 if (file.type === 'image/jpeg') {
                     optimizedBlob = await compressImageToCanvas(file, 'image/jpeg', 0.8);
                 } else if (file.type === 'image/png') {
-                    // Используем новый продвинутый алгоритм для PNG
+                    // Новый, пуленепробиваемый метод для PNG
                     optimizedBlob = await compressPNGWithUPNG(file);
                 }
 
-                // Если вдруг сжатый файл оказался больше оригинала (очень редко, но бывает)
                 if (optimizedBlob.size >= file.size) {
                     optimizedBlob = file;
                 }
@@ -324,14 +309,11 @@
                 totalOriginalSize += file.size;
                 totalOptimizedSize += optimizedBlob.size;
 
-                // Add to ZIP (preserve folder structure using customPath or webkitRelativePath)
                 let filePath = file.customPath || file.webkitRelativePath || file.name;
-                // Remove leading slash if exists to prevent weird zip structures
                 if(filePath.startsWith('/')) filePath = filePath.substring(1); 
                 
                 zip.file(filePath, optimizedBlob);
 
-                // Update UI
                 updateRowSuccess(id, file.size, optimizedBlob.size);
             } catch (error) {
                 console.error("Error optimizing file:", error);
@@ -339,28 +321,45 @@
             }
         }
 
-        // --- Умное сжатие PNG (алгоритм как у TinyPNG) ---
+        // --- Умное сжатие PNG (Новая надежная логика) ---
         async function compressPNGWithUPNG(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = function(e) {
+            return new Promise((resolve) => {
+                const img = new Image();
+                const url = URL.createObjectURL(file);
+
+                img.onload = async () => {
+                    URL.revokeObjectURL(url);
                     try {
-                        // 1. Декодируем исходный PNG файл
-                        const img = UPNG.decode(e.target.result);
+                        // 1. Используем нативный браузерный Canvas для чтения любых PNG
+                        const canvas = document.createElement('canvas');
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0);
+
                         // 2. Получаем сырые пиксели
-                        const rgba = UPNG.toRGBA8(img)[0];
-                        // 3. Кодируем обратно с потерей данных (ограничиваем до 256 цветов)
-                        // Это дает экстремальное сжатие без видимой потери качества
-                        const compressed = UPNG.encode([rgba], img.width, img.height, 256);
-                        
+                        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                        const rgbaBuffer = imgData.data.buffer;
+
+                        // Даем браузеру долю секунды на отрисовку UI перед зависанием процессора
+                        await new Promise(r => setTimeout(r, 100));
+
+                        // 3. Кодируем в PNG с палитрой 256 цветов (Оптимизация)
+                        const compressed = UPNG.encode([rgbaBuffer], canvas.width, canvas.height, 256);
                         resolve(new Blob([compressed], { type: 'image/png' }));
                     } catch(err) {
                         console.error("Ошибка при сжатии PNG:", err);
-                        resolve(file); // Если алгоритм не справился, безопасно возвращаем оригинал
+                        // Если картинка гигантская и не влезла в память - безопасно возвращаем оригинал
+                        resolve(file); 
                     }
                 };
-                reader.onerror = () => resolve(file);
-                reader.readAsArrayBuffer(file);
+                
+                img.onerror = () => {
+                    URL.revokeObjectURL(url);
+                    resolve(file); // Защита от битых файлов
+                };
+                
+                img.src = url;
             });
         }
 
