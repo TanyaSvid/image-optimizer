@@ -36,7 +36,7 @@
             <h1 class="text-xl font-bold text-gray-800">Умный Оптимизатор</h1>
         </div>
         <div class="text-sm text-gray-500 hidden sm:block">
-            <i class="fa-solid fa-shield-halved mr-1"></i> Локальная обработка (без загрузки на сервер)
+            <i class="fa-solid fa-shield-halved mr-1"></i> Локальная обработка (без сервера)
         </div>
     </header>
 
@@ -55,44 +55,48 @@
             <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-start gap-3">
                 <i class="fa-regular fa-image text-green-500 mt-1"></i>
                 <div>
-                    <h3 class="font-semibold text-sm">Алгоритмы TinyPNG</h3>
-                    <p class="text-xs text-gray-500 mt-1">Максимум до 20 МБ. JPEG 90% качества. Умный дизеринг для PNG (без пикселей).</p>
+                    <h3 class="font-semibold text-sm">Супер-сжатие</h3>
+                    <p class="text-xs text-gray-500 mt-1">Экономия до 90%. Умное сокращение палитры PNG и оптимизация JPEG.</p>
                 </div>
             </div>
             <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-start gap-3">
                 <i class="fa-solid fa-bolt text-yellow-500 mt-1"></i>
                 <div>
                     <h3 class="font-semibold text-sm">Быстро и безопасно</h3>
-                    <p class="text-xs text-gray-500 mt-1">Ваши файлы не покидают браузер. Экономия трафика и полная конфиденциальность.</p>
+                    <p class="text-xs text-gray-500 mt-1">Ваши файлы не покидают браузер. Полная конфиденциальность.</p>
                 </div>
             </div>
         </div>
 
+        <!-- Настройки сжатия -->
+        <div class="flex justify-center mt-2">
+            <div class="bg-gray-200/60 p-1 rounded-xl inline-flex relative shadow-inner">
+                <button onclick="setMode('tiny')" id="btnTiny" class="px-5 py-2.5 bg-white text-gray-800 rounded-lg shadow-sm text-sm font-semibold transition-all duration-200 flex items-center gap-2">
+                    🔥 Максимальное (-90%)
+                </button>
+                <button onclick="setMode('safe')" id="btnSafe" class="px-5 py-2.5 text-gray-500 hover:text-gray-700 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2">
+                    ✨ Бережное (-70%)
+                </button>
+            </div>
+        </div>
+
         <!-- Dropzone -->
-        <!-- Теперь клик по зоне открывает модальное окно выбора (openUploadModal) -->
-        <div id="dropzone" onclick="openUploadModal()" class="border-2 border-dashed border-gray-300 rounded-2xl p-12 text-center bg-white transition-all duration-200 hover:border-blue-400 hover:bg-blue-50/50 cursor-pointer flex flex-col items-center justify-center min-h-[250px]">
+        <div id="dropzone" onclick="openUploadModal()" class="border-2 border-dashed border-gray-300 rounded-2xl p-10 text-center bg-white transition-all duration-200 hover:border-blue-400 hover:bg-blue-50/50 cursor-pointer flex flex-col items-center justify-center min-h-[220px]">
             <div class="bg-blue-50 text-blue-500 rounded-full w-16 h-16 flex items-center justify-center mb-4">
                 <i class="fa-solid fa-cloud-arrow-up text-2xl"></i>
             </div>
             <h2 class="text-lg font-semibold text-gray-700 pointer-events-none">Перетащите файлы или папки сюда</h2>
-            <p class="text-sm text-gray-500 mt-2 mb-6 pointer-events-none">Чтобы добавить сразу несколько папок, выделите их на компьютере и перетащите мышкой в это окно. <br><span class="inline-block mt-1 px-2 py-1 bg-gray-100 rounded text-gray-600 font-medium">Лимит: до 20 МБ на каждое изображение</span></p>
+            <p class="text-sm text-gray-500 mt-2 mb-6 pointer-events-none">Чтобы добавить сразу несколько папок, выделите их на компьютере и перетащите мышкой в это окно. <br><span class="inline-block mt-2 px-2 py-1 bg-gray-100 rounded text-gray-600 font-medium">Лимит: до 20 МБ на изображение</span></p>
             
-            <div class="flex gap-4 flex-wrap justify-center">
-                <button onclick="event.stopPropagation(); document.getElementById('fileInput').click()" class="px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition">
-                    Выбрать файлы
-                </button>
-                <button onclick="event.stopPropagation(); document.getElementById('folderInput').click()" class="px-5 py-2.5 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition">
-                    Выбрать папку
-                </button>
+            <div class="flex gap-4 flex-wrap justify-center pointer-events-none">
+                <span class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg shadow-sm transition">
+                    Нажмите для выбора
+                </span>
             </div>
             
             <p class="text-xs text-gray-400 mt-5 max-w-md mx-auto pointer-events-none">
                 Примечание: клик в любом пустом месте этого окна откроет меню быстрого выбора.
             </p>
-            
-            <!-- Hidden inputs -->
-            <input type="file" id="fileInput" multiple accept="image/jpeg, image/png" class="hidden">
-            <input type="file" id="folderInput" webkitdirectory directory multiple class="hidden">
         </div>
 
         <!-- Progress & Actions -->
@@ -134,7 +138,7 @@
 
     </main>
 
-    <!-- Модальное окно выбора загрузки -->
+    <!-- Модальное окно выбора загрузки (С лейблами для обхода защиты браузера) -->
     <div id="uploadModal" onclick="closeUploadModal()" class="hidden fixed inset-0 z-50 bg-gray-900/40 backdrop-blur-sm items-center justify-center p-4 opacity-0 transition-opacity duration-200">
         <div onclick="event.stopPropagation()" class="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm transform scale-95 transition-transform duration-200" id="uploadModalContent">
             <div class="flex justify-between items-center mb-5">
@@ -144,17 +148,19 @@
                 </button>
             </div>
             <div class="flex flex-col gap-3">
-                <button onclick="document.getElementById('fileInput').click(); closeUploadModal()" class="w-full p-4 bg-blue-50 hover:bg-blue-100 text-blue-700 font-semibold rounded-xl transition flex items-center justify-start gap-4 border border-blue-200">
+                <label class="w-full p-4 bg-blue-50 hover:bg-blue-100 text-blue-700 font-semibold rounded-xl transition flex items-center justify-start gap-4 border border-blue-200 cursor-pointer shadow-sm">
+                    <input type="file" id="fileInput" multiple accept="image/jpeg, image/png" class="hidden">
                     <div class="bg-blue-600 text-white rounded-full w-10 h-10 flex items-center justify-center flex-shrink-0">
                         <i class="fa-regular fa-file-image"></i>
                     </div>
                     <div class="text-left">
                         <div class="text-base">Отдельные файлы</div>
-                        <div class="text-xs font-normal text-blue-500/80">JPEG или PNG изображения</div>
+                        <div class="text-xs font-normal text-blue-500/80">Выбрать картинки</div>
                     </div>
-                </button>
+                </label>
                 
-                <button onclick="document.getElementById('folderInput').click(); closeUploadModal()" class="w-full p-4 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold rounded-xl transition flex items-center justify-start gap-4 border border-indigo-200">
+                <label class="w-full p-4 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold rounded-xl transition flex items-center justify-start gap-4 border border-indigo-200 cursor-pointer shadow-sm">
+                    <input type="file" id="folderInput" webkitdirectory directory class="hidden">
                     <div class="bg-indigo-600 text-white rounded-full w-10 h-10 flex items-center justify-center flex-shrink-0">
                         <i class="fa-solid fa-folder-open"></i>
                     </div>
@@ -162,7 +168,7 @@
                         <div class="text-base">Папку целиком</div>
                         <div class="text-xs font-normal text-indigo-500/80">Сохранит структуру папок</div>
                     </div>
-                </button>
+                </label>
             </div>
         </div>
     </div>
@@ -189,12 +195,29 @@
         let totalOriginalSize = 0;
         let totalOptimizedSize = 0;
         let zip = new JSZip();
+        
+        // По умолчанию агрессивный режим "как TinyPNG"
+        let currentCompressMode = 'tiny'; 
+
+        // --- Управление режимами сжатия ---
+        function setMode(mode) {
+            currentCompressMode = mode;
+            const btnTiny = document.getElementById('btnTiny');
+            const btnSafe = document.getElementById('btnSafe');
+
+            if (mode === 'tiny') {
+                btnTiny.className = "px-5 py-2.5 bg-white text-gray-800 rounded-lg shadow-sm text-sm font-semibold transition-all duration-200 flex items-center gap-2";
+                btnSafe.className = "px-5 py-2.5 text-gray-500 hover:text-gray-700 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2";
+            } else {
+                btnSafe.className = "px-5 py-2.5 bg-white text-gray-800 rounded-lg shadow-sm text-sm font-semibold transition-all duration-200 flex items-center gap-2";
+                btnTiny.className = "px-5 py-2.5 text-gray-500 hover:text-gray-700 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2";
+            }
+        }
 
         // --- Управление модальным окном ---
         function openUploadModal() {
             uploadModal.classList.remove('hidden');
             uploadModal.classList.add('flex');
-            // Небольшая задержка для анимации
             setTimeout(() => {
                 uploadModal.classList.remove('opacity-0');
                 uploadModalContent.classList.remove('scale-95');
@@ -234,11 +257,13 @@
         dropzone.addEventListener('drop', handleDrop, false);
         
         fileInput.addEventListener('change', (e) => {
+            closeUploadModal();
             handleFiles(Array.from(e.target.files));
             e.target.value = ''; 
         });
         
         folderInput.addEventListener('change', (e) => {
+            closeUploadModal();
             const files = Array.from(e.target.files).map(f => {
                 f.customPath = f.webkitRelativePath; 
                 return f;
@@ -347,25 +372,25 @@
         async function optimizeFile(file) {
             const id = file.uiId;
             
-            // Если это PNG, показываем особое уведомление, так как математика тяжелая
             if (file.type === 'image/png') {
                 updateRowStatus(id, 'loading_png');
             } else {
                 updateRowStatus(id, 'loading');
             }
             
-            // Даем интерфейсу обновиться
             await new Promise(resolve => setTimeout(resolve, 50)); 
 
             try {
                 let optimizedBlob;
                 
+                // Настройки в зависимости от выбранного режима
+                const jpegQuality = currentCompressMode === 'tiny' ? 0.75 : 0.90;
+                const pngColors = currentCompressMode === 'tiny' ? 128 : 256;
+                
                 if (file.type === 'image/jpeg') {
-                    // JPEG сжимается со стабильным качеством 90%
-                    optimizedBlob = await compressImageToCanvas(file, 'image/jpeg', 0.9);
+                    optimizedBlob = await compressImageToCanvas(file, 'image/jpeg', jpegQuality);
                 } else if (file.type === 'image/png') {
-                    // PNG сжимается по логике TinyPNG
-                    optimizedBlob = await compressPNGWithTinyPngLogic(file);
+                    optimizedBlob = await compressPNGWithTinyPngLogic(file, pngColors);
                 }
 
                 if (optimizedBlob.size >= file.size) {
@@ -387,8 +412,8 @@
             }
         }
 
-        // --- Умное сжатие PNG (ТОЧНАЯ логика TinyPNG: 256 цветов + Dithering) ---
-        async function compressPNGWithTinyPngLogic(file) {
+        // --- Умное сжатие PNG ---
+        async function compressPNGWithTinyPngLogic(file, colorCount) {
             return new Promise((resolve) => {
                 const img = new Image();
                 const url = URL.createObjectURL(file);
@@ -397,36 +422,47 @@
                     URL.revokeObjectURL(url);
                     try {
                         const canvas = document.createElement('canvas');
-                        canvas.width = img.width;
-                        canvas.height = img.height;
+                        
+                        // Секретное оружие для огромных картинок (как маркетплейсы любят)
+                        // Если картинка больше 3000px, чуть ужимаем разрешение для макс. экономии веса
+                        let targetWidth = img.width;
+                        let targetHeight = img.height;
+                        const MAX_DIM = 3000;
+                        
+                        if (currentCompressMode === 'tiny' && (targetWidth > MAX_DIM || targetHeight > MAX_DIM)) {
+                            if (targetWidth > targetHeight) {
+                                targetHeight = Math.round((targetHeight * MAX_DIM) / targetWidth);
+                                targetWidth = MAX_DIM;
+                            } else {
+                                targetWidth = Math.round((targetWidth * MAX_DIM) / targetHeight);
+                                targetHeight = MAX_DIM;
+                            }
+                        }
+                        
+                        canvas.width = targetWidth;
+                        canvas.height = targetHeight;
                         const ctx = canvas.getContext('2d');
-                        ctx.drawImage(img, 0, 0);
+                        
+                        // Высокое качество интерполяции при изменении размера
+                        ctx.imageSmoothingEnabled = true;
+                        ctx.imageSmoothingQuality = 'high';
+                        ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
 
                         const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
-                        // Ждем долю секунды, чтобы браузер не "завис"
                         await new Promise(r => setTimeout(r, 100));
 
-                        // Если библиотека сглаживания успешно загрузилась
                         if (typeof imageQ !== 'undefined') {
-                            // 1. Создаем математическую модель пикселей
                             const pointContainer = imageQ.utils.PointContainer.fromUint8Array(imgData.data, canvas.width, canvas.height);
-                            
-                            // 2. Строим идеальную палитру на 256 цветов для конкретно этой картинки
-                            const palette = imageQ.buildPaletteSync([pointContainer], { colors: 256 });
-                            
-                            // 3. Применяем дизеринг (Floyd-Steinberg), чтобы убрать "пиксельность" и "лесенки"
+                            // Создаем палитру (128 цветов для режима Tiny дает огромную экономию)
+                            const palette = imageQ.buildPaletteSync([pointContainer], { colors: colorCount });
                             const outPointContainer = imageQ.applyPaletteSync(pointContainer, palette, { imageQuantization: 'floyd-steinberg' });
                             
-                            // 4. Получаем сглаженные пиксели
                             const ditheredRgba = outPointContainer.toUint8Array();
-                            
-                            // 5. Кодируем в легкий PNG (UPNG поймет, что цветов 256 и сожмет файл до минимума)
-                            const compressed = UPNG.encode([ditheredRgba.buffer], canvas.width, canvas.height, 256);
+                            const compressed = UPNG.encode([ditheredRgba.buffer], canvas.width, canvas.height, colorCount);
                             resolve(new Blob([compressed], { type: 'image/png' }));
                         } else {
-                            // Резервный вариант, если библиотека не подгрузилась
-                            const compressed = UPNG.encode([imgData.data.buffer], canvas.width, canvas.height, 256);
+                            const compressed = UPNG.encode([imgData.data.buffer], canvas.width, canvas.height, colorCount);
                             resolve(new Blob([compressed], { type: 'image/png' }));
                         }
                     } catch(err) {
@@ -453,16 +489,30 @@
                 img.onload = () => {
                     URL.revokeObjectURL(url);
                     const canvas = document.createElement('canvas');
-                    canvas.width = img.width;
-                    canvas.height = img.height;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0);
                     
-                    if(quality) {
-                        canvas.toBlob(blob => resolve(blob), mimeType, quality);
-                    } else {
-                        canvas.toBlob(blob => resolve(blob), mimeType);
+                    let targetWidth = img.width;
+                    let targetHeight = img.height;
+                    const MAX_DIM = 3000;
+                    
+                    if (currentCompressMode === 'tiny' && (targetWidth > MAX_DIM || targetHeight > MAX_DIM)) {
+                        if (targetWidth > targetHeight) {
+                            targetHeight = Math.round((targetHeight * MAX_DIM) / targetWidth);
+                            targetWidth = MAX_DIM;
+                        } else {
+                            targetWidth = Math.round((targetWidth * MAX_DIM) / targetHeight);
+                            targetHeight = MAX_DIM;
+                        }
                     }
+                    
+                    canvas.width = targetWidth;
+                    canvas.height = targetHeight;
+                    const ctx = canvas.getContext('2d');
+                    
+                    ctx.imageSmoothingEnabled = true;
+                    ctx.imageSmoothingQuality = 'high';
+                    ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
+                    
+                    canvas.toBlob(blob => resolve(blob), mimeType, quality);
                 };
                 img.onerror = () => reject(new Error("Image load failed"));
                 img.src = url;
@@ -500,7 +550,7 @@
             if (status === 'loading') {
                 statusCell.innerHTML = `<span class="text-blue-500"><i class="fa-solid fa-circle-notch fa-spin"></i> Сжатие...</span>`;
             } else if (status === 'loading_png') {
-                statusCell.innerHTML = `<span class="text-indigo-500" title="Умное сглаживание PNG может занять 5-15 секунд"><i class="fa-solid fa-circle-notch fa-spin"></i> Сжатие (TinyPNG)...</span>`;
+                statusCell.innerHTML = `<span class="text-indigo-500" title="Математическое сглаживание PNG занимает время"><i class="fa-solid fa-circle-notch fa-spin"></i> Сжатие...</span>`;
             } else if (status === 'error') {
                 statusCell.innerHTML = `<span class="text-red-500"><i class="fa-solid fa-circle-exclamation"></i> Ошибка</span>`;
             }
