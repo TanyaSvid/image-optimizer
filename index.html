@@ -56,20 +56,20 @@
         </div>
 
         <!-- Dropzone -->
-        <div id="dropzone" onclick="document.getElementById('fileInput').click()" class="border-2 border-dashed border-gray-300 rounded-2xl p-10 text-center bg-white transition-all duration-200 hover:border-blue-400 hover:bg-blue-50/50 cursor-pointer flex flex-col items-center justify-center min-h-[220px]">
+        <div id="dropzone" class="border-2 border-dashed border-gray-300 rounded-2xl p-10 text-center bg-white transition-all duration-200 hover:border-blue-400 hover:bg-blue-50/50 cursor-pointer flex flex-col items-center justify-center min-h-[220px]">
             <div class="bg-blue-50 text-blue-500 rounded-full w-16 h-16 flex items-center justify-center mb-4 pointer-events-none">
                 <i class="fa-solid fa-cloud-arrow-up text-2xl"></i>
             </div>
             <h2 class="text-lg font-semibold text-gray-700 pointer-events-none">Перетащите файлы или папки сюда</h2>
             <p class="text-sm text-gray-500 mt-2 mb-6 pointer-events-none">Чтобы добавить сразу несколько папок, выделите их на компьютере и перетащите мышкой в это окно. <br><span class="inline-block mt-2 px-2 py-1 bg-gray-100 rounded text-gray-600 font-medium">Лимит: до 20 МБ на изображение</span></p>
             
-            <div class="flex gap-3 flex-wrap justify-center items-center">
+            <div class="flex gap-3 flex-wrap justify-center items-center relative z-10">
                 <!-- Первичная кнопка (Файлы) -->
-                <label for="fileInput" onclick="event.stopPropagation()" class="px-6 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition shadow-sm cursor-pointer m-0">
+                <label for="fileInput" class="px-6 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition shadow-sm cursor-pointer m-0">
                     Выбрать файлы
                 </label>
                 <!-- Второстепенная кнопка (Папки) - визуально облегчена -->
-                <label for="folderInput" onclick="event.stopPropagation()" class="px-4 py-2 text-gray-500 hover:text-gray-800 hover:bg-gray-100 text-sm font-medium rounded-lg transition cursor-pointer m-0">
+                <label for="folderInput" class="px-4 py-2 text-gray-500 hover:text-gray-800 hover:bg-gray-100 text-sm font-medium rounded-lg transition cursor-pointer m-0">
                     Выбрать папку
                 </label>
             </div>
@@ -77,11 +77,11 @@
             <p class="text-xs text-gray-400 mt-5 max-w-md mx-auto pointer-events-none">
                 Примечание: клик в любом пустом месте этого окна откроет выбор файлов.
             </p>
-
-            <!-- Hidden inputs -->
-            <input type="file" id="fileInput" multiple accept="image/jpeg, image/png" class="hidden">
-            <input type="file" id="folderInput" webkitdirectory directory multiple class="hidden">
         </div>
+
+        <!-- Скрытые инпуты ПЕРЕНЕСЕНЫ за пределы dropzone, чтобы избежать двойного открытия окон -->
+        <input type="file" id="fileInput" multiple accept="image/jpeg, image/png" class="hidden">
+        <input type="file" id="folderInput" webkitdirectory directory multiple class="hidden">
 
         <!-- Progress & Actions -->
         <div id="actionArea" class="hidden bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col sm:flex-row justify-between items-center gap-4">
@@ -183,6 +183,14 @@
         
         // По умолчанию агрессивный режим "как TinyPNG"
         let currentCompressMode = 'tiny'; 
+
+        // Обработка клика по зоне (только по пустому месту)
+        dropzone.addEventListener('click', (e) => {
+            // Если кликнули на одну из кнопок (label), то игнорируем, чтобы не было двойного открытия
+            if (e.target.closest('label')) return;
+            // Иначе открываем выбор файлов
+            fileInput.click();
+        });
 
         // --- Управление множественным выбором ---
         function toggleSelectAll() {
