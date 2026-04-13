@@ -25,7 +25,7 @@
         ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
     </style>
 </head>
-<body class="bg-gray-50 text-gray-800 font-sans min-h-screen flex flex-col">
+<body class="bg-gray-50 text-gray-800 font-sans min-h-screen flex flex-col relative">
 
     <!-- Header -->
     <header class="bg-white shadow-sm py-4 px-8 flex justify-between items-center">
@@ -69,11 +69,12 @@
         </div>
 
         <!-- Dropzone -->
-        <div id="dropzone" onclick="document.getElementById('fileInput').click()" class="border-2 border-dashed border-gray-300 rounded-2xl p-12 text-center bg-white transition-all duration-200 hover:border-blue-400 hover:bg-blue-50/50 cursor-pointer flex flex-col items-center justify-center min-h-[250px]">
+        <!-- Теперь клик по зоне открывает модальное окно выбора (openUploadModal) -->
+        <div id="dropzone" onclick="openUploadModal()" class="border-2 border-dashed border-gray-300 rounded-2xl p-12 text-center bg-white transition-all duration-200 hover:border-blue-400 hover:bg-blue-50/50 cursor-pointer flex flex-col items-center justify-center min-h-[250px]">
             <div class="bg-blue-50 text-blue-500 rounded-full w-16 h-16 flex items-center justify-center mb-4">
                 <i class="fa-solid fa-cloud-arrow-up text-2xl"></i>
             </div>
-            <h2 class="text-lg font-semibold text-gray-700">Перетащите файлы или несколько папок сюда</h2>
+            <h2 class="text-lg font-semibold text-gray-700 pointer-events-none">Перетащите файлы или папки сюда</h2>
             <p class="text-sm text-gray-500 mt-2 mb-6 pointer-events-none">Чтобы добавить сразу несколько папок, выделите их на компьютере и перетащите мышкой в это окно. <br><span class="inline-block mt-1 px-2 py-1 bg-gray-100 rounded text-gray-600 font-medium">Лимит: до 20 МБ на каждое изображение</span></p>
             
             <div class="flex gap-4 flex-wrap justify-center">
@@ -81,12 +82,12 @@
                     Выбрать файлы
                 </button>
                 <button onclick="event.stopPropagation(); document.getElementById('folderInput').click()" class="px-5 py-2.5 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition">
-                    Выбрать папку (по одной)
+                    Выбрать папку
                 </button>
             </div>
             
             <p class="text-xs text-gray-400 mt-5 max-w-md mx-auto pointer-events-none">
-                Примечание: клик в любом месте окна откроет выбор файлов. Чтобы выбрать целую папку — используйте правую кнопку.
+                Примечание: клик в любом пустом месте этого окна откроет меню быстрого выбора.
             </p>
             
             <!-- Hidden inputs -->
@@ -133,6 +134,39 @@
 
     </main>
 
+    <!-- Модальное окно выбора загрузки -->
+    <div id="uploadModal" onclick="closeUploadModal()" class="hidden fixed inset-0 z-50 bg-gray-900/40 backdrop-blur-sm items-center justify-center p-4 opacity-0 transition-opacity duration-200">
+        <div onclick="event.stopPropagation()" class="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm transform scale-95 transition-transform duration-200" id="uploadModalContent">
+            <div class="flex justify-between items-center mb-5">
+                <h3 class="text-lg font-bold text-gray-800">Что загружаем?</h3>
+                <button onclick="closeUploadModal()" class="text-gray-400 hover:text-gray-600 transition">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+            <div class="flex flex-col gap-3">
+                <button onclick="document.getElementById('fileInput').click(); closeUploadModal()" class="w-full p-4 bg-blue-50 hover:bg-blue-100 text-blue-700 font-semibold rounded-xl transition flex items-center justify-start gap-4 border border-blue-200">
+                    <div class="bg-blue-600 text-white rounded-full w-10 h-10 flex items-center justify-center flex-shrink-0">
+                        <i class="fa-regular fa-file-image"></i>
+                    </div>
+                    <div class="text-left">
+                        <div class="text-base">Отдельные файлы</div>
+                        <div class="text-xs font-normal text-blue-500/80">JPEG или PNG изображения</div>
+                    </div>
+                </button>
+                
+                <button onclick="document.getElementById('folderInput').click(); closeUploadModal()" class="w-full p-4 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold rounded-xl transition flex items-center justify-start gap-4 border border-indigo-200">
+                    <div class="bg-indigo-600 text-white rounded-full w-10 h-10 flex items-center justify-center flex-shrink-0">
+                        <i class="fa-solid fa-folder-open"></i>
+                    </div>
+                    <div class="text-left">
+                        <div class="text-base">Папку целиком</div>
+                        <div class="text-xs font-normal text-indigo-500/80">Сохранит структуру папок</div>
+                    </div>
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // DOM Elements
         const dropzone = document.getElementById('dropzone');
@@ -145,6 +179,8 @@
         const totalCountEl = document.getElementById('totalCount');
         const totalSavedEl = document.getElementById('totalSaved');
         const downloadBtn = document.getElementById('downloadBtn');
+        const uploadModal = document.getElementById('uploadModal');
+        const uploadModalContent = document.getElementById('uploadModalContent');
 
         // State
         const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB
@@ -153,6 +189,28 @@
         let totalOriginalSize = 0;
         let totalOptimizedSize = 0;
         let zip = new JSZip();
+
+        // --- Управление модальным окном ---
+        function openUploadModal() {
+            uploadModal.classList.remove('hidden');
+            uploadModal.classList.add('flex');
+            // Небольшая задержка для анимации
+            setTimeout(() => {
+                uploadModal.classList.remove('opacity-0');
+                uploadModalContent.classList.remove('scale-95');
+                uploadModalContent.classList.add('scale-100');
+            }, 10);
+        }
+
+        function closeUploadModal() {
+            uploadModal.classList.add('opacity-0');
+            uploadModalContent.classList.remove('scale-100');
+            uploadModalContent.classList.add('scale-95');
+            setTimeout(() => {
+                uploadModal.classList.add('hidden');
+                uploadModal.classList.remove('flex');
+            }, 200);
+        }
 
         // --- Event Listeners for Drag & Drop ---
         ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
