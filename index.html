@@ -8,9 +8,10 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     
-    <!-- Добавлены библиотеки для умного сжатия PNG (как в TinyPNG) -->
+    <!-- Библиотеки для умного сжатия PNG (Алгоритмы как у TinyPNG) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/1.0.11/pako.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/upng-js@2.1.0/UPNG.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/image-q@4.0.0/dist/image-q.min.js"></script>
 
     <style>
         .drag-active {
@@ -54,8 +55,8 @@
             <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-start gap-3">
                 <i class="fa-regular fa-image text-green-500 mt-1"></i>
                 <div>
-                    <h3 class="font-semibold text-sm">JPEG & PNG</h3>
-                    <p class="text-xs text-gray-500 mt-1">Максимальный размер файла — 20 МБ. Умное сжатие без видимой потери качества.</p>
+                    <h3 class="font-semibold text-sm">Алгоритмы TinyPNG</h3>
+                    <p class="text-xs text-gray-500 mt-1">Максимум до 20 МБ. JPEG 90% качества. Умный дизеринг для PNG (без пикселей).</p>
                 </div>
             </div>
             <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-start gap-3">
@@ -287,19 +288,26 @@
 
         async function optimizeFile(file) {
             const id = file.uiId;
-            updateRowStatus(id, 'loading');
             
-            // Даем интерфейсу обновиться перед тяжелой задачей
+            // Если это PNG, показываем особое уведомление, так как математика тяжелая
+            if (file.type === 'image/png') {
+                updateRowStatus(id, 'loading_png');
+            } else {
+                updateRowStatus(id, 'loading');
+            }
+            
+            // Даем интерфейсу обновиться
             await new Promise(resolve => setTimeout(resolve, 50)); 
 
             try {
                 let optimizedBlob;
                 
                 if (file.type === 'image/jpeg') {
-                    optimizedBlob = await compressImageToCanvas(file, 'image/jpeg', 0.8);
+                    // JPEG сжимается со стабильным качеством 90%
+                    optimizedBlob = await compressImageToCanvas(file, 'image/jpeg', 0.9);
                 } else if (file.type === 'image/png') {
-                    // Новый, пуленепробиваемый метод для PNG
-                    optimizedBlob = await compressPNGWithUPNG(file);
+                    // PNG сжимается по логике TinyPNG
+                    optimizedBlob = await compressPNGWithTinyPngLogic(file);
                 }
 
                 if (optimizedBlob.size >= file.size) {
@@ -321,8 +329,8 @@
             }
         }
 
-        // --- Умное сжатие PNG (Новая надежная логика) ---
-        async function compressPNGWithUPNG(file) {
+        // --- Умное сжатие PNG (ТОЧНАЯ логика TinyPNG: 256 цветов + Dithering) ---
+        async function compressPNGWithTinyPngLogic(file) {
             return new Promise((resolve) => {
                 const img = new Image();
                 const url = URL.createObjectURL(file);
@@ -330,40 +338,55 @@
                 img.onload = async () => {
                     URL.revokeObjectURL(url);
                     try {
-                        // 1. Используем нативный браузерный Canvas для чтения любых PNG
                         const canvas = document.createElement('canvas');
                         canvas.width = img.width;
                         canvas.height = img.height;
                         const ctx = canvas.getContext('2d');
                         ctx.drawImage(img, 0, 0);
 
-                        // 2. Получаем сырые пиксели
                         const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                        const rgbaBuffer = imgData.data.buffer;
 
-                        // Даем браузеру долю секунды на отрисовку UI перед зависанием процессора
+                        // Ждем долю секунды, чтобы браузер не "завис"
                         await new Promise(r => setTimeout(r, 100));
 
-                        // 3. Кодируем в PNG с палитрой 256 цветов (Оптимизация)
-                        const compressed = UPNG.encode([rgbaBuffer], canvas.width, canvas.height, 256);
-                        resolve(new Blob([compressed], { type: 'image/png' }));
+                        // Если библиотека сглаживания успешно загрузилась
+                        if (typeof imageQ !== 'undefined') {
+                            // 1. Создаем математическую модель пикселей
+                            const pointContainer = imageQ.utils.PointContainer.fromUint8Array(imgData.data, canvas.width, canvas.height);
+                            
+                            // 2. Строим идеальную палитру на 256 цветов для конкретно этой картинки
+                            const palette = imageQ.buildPaletteSync([pointContainer], { colors: 256 });
+                            
+                            // 3. Применяем дизеринг (Floyd-Steinberg), чтобы убрать "пиксельность" и "лесенки"
+                            const outPointContainer = imageQ.applyPaletteSync(pointContainer, palette, { imageQuantization: 'floyd-steinberg' });
+                            
+                            // 4. Получаем сглаженные пиксели
+                            const ditheredRgba = outPointContainer.toUint8Array();
+                            
+                            // 5. Кодируем в легкий PNG (UPNG поймет, что цветов 256 и сожмет файл до минимума)
+                            const compressed = UPNG.encode([ditheredRgba.buffer], canvas.width, canvas.height, 256);
+                            resolve(new Blob([compressed], { type: 'image/png' }));
+                        } else {
+                            // Резервный вариант, если библиотека не подгрузилась
+                            const compressed = UPNG.encode([imgData.data.buffer], canvas.width, canvas.height, 256);
+                            resolve(new Blob([compressed], { type: 'image/png' }));
+                        }
                     } catch(err) {
                         console.error("Ошибка при сжатии PNG:", err);
-                        // Если картинка гигантская и не влезла в память - безопасно возвращаем оригинал
                         resolve(file); 
                     }
                 };
                 
                 img.onerror = () => {
                     URL.revokeObjectURL(url);
-                    resolve(file); // Защита от битых файлов
+                    resolve(file); 
                 };
                 
                 img.src = url;
             });
         }
 
-        // --- Стандартное сжатие JPEG через Canvas ---
+        // --- Стандартное сжатие JPEG ---
         function compressImageToCanvas(file, mimeType, quality) {
             return new Promise((resolve, reject) => {
                 const img = new Image();
@@ -418,6 +441,8 @@
             
             if (status === 'loading') {
                 statusCell.innerHTML = `<span class="text-blue-500"><i class="fa-solid fa-circle-notch fa-spin"></i> Сжатие...</span>`;
+            } else if (status === 'loading_png') {
+                statusCell.innerHTML = `<span class="text-indigo-500" title="Умное сглаживание PNG может занять 5-15 секунд"><i class="fa-solid fa-circle-notch fa-spin"></i> Сжатие (TinyPNG)...</span>`;
             } else if (status === 'error') {
                 statusCell.innerHTML = `<span class="text-red-500"><i class="fa-solid fa-circle-exclamation"></i> Ошибка</span>`;
             }
