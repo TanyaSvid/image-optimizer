@@ -43,7 +43,7 @@
     <!-- Main Content -->
     <main class="flex-grow max-w-6xl w-full mx-auto p-6 flex flex-col gap-6">
         
-        <!-- Настройки сжатия (Перенесены на самый верх) -->
+        <!-- Настройки сжатия -->
         <div class="flex justify-center mt-2 mb-2">
             <div class="bg-gray-200/60 p-1 rounded-xl inline-flex relative shadow-inner">
                 <button onclick="setMode('tiny')" id="btnTiny" class="px-5 py-2.5 bg-white text-gray-800 rounded-lg shadow-sm text-sm font-semibold transition-all duration-200 flex items-center gap-2">
@@ -64,11 +64,9 @@
             <p class="text-sm text-gray-500 mt-2 mb-6 pointer-events-none">Чтобы добавить сразу несколько папок, выделите их на компьютере и перетащите мышкой в это окно. <br><span class="inline-block mt-2 px-2 py-1 bg-gray-100 rounded text-gray-600 font-medium">Лимит: до 20 МБ на изображение</span></p>
             
             <div class="flex gap-3 flex-wrap justify-center items-center relative z-10">
-                <!-- Первичная кнопка (Файлы) -->
                 <label for="fileInput" class="px-6 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition shadow-sm cursor-pointer m-0">
                     Выбрать файлы
                 </label>
-                <!-- Второстепенная кнопка (Папки) - визуально облегчена -->
                 <label for="folderInput" class="px-4 py-2 text-gray-500 hover:text-gray-800 hover:bg-gray-100 text-sm font-medium rounded-lg transition cursor-pointer m-0">
                     Выбрать папку
                 </label>
@@ -79,7 +77,7 @@
             </p>
         </div>
 
-        <!-- Скрытые инпуты ПЕРЕНЕСЕНЫ за пределы dropzone, чтобы избежать двойного открытия окон -->
+        <!-- Скрытые инпуты (Вне зоны dropzone для предотвращения двойного срабатывания) -->
         <input type="file" id="fileInput" multiple accept="image/jpeg, image/png" class="hidden">
         <input type="file" id="folderInput" webkitdirectory directory multiple class="hidden">
 
@@ -122,8 +120,8 @@
                             <th class="px-4 py-3 font-medium">Оригинал</th>
                             <th class="px-4 py-3 font-medium">Сжато</th>
                             <th class="px-4 py-3 font-medium">Экономия</th>
-                            <th class="px-4 py-3 font-medium text-right">Статус</th>
-                            <th class="px-4 py-3 font-medium w-10 text-center"></th> <!-- Пустое место для крестиков -->
+                            <th class="px-4 py-3 font-medium text-right">Скачать</th>
+                            <th class="px-4 py-3 font-medium w-10 text-center"></th> <!-- Крестик -->
                         </tr>
                     </thead>
                     <tbody id="fileList" class="divide-y divide-gray-50">
@@ -133,7 +131,7 @@
             </div>
         </div>
 
-        <!-- Info Cards (Опущены вниз экрана) -->
+        <!-- Info Cards -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-8 opacity-70 hover:opacity-100 transition-opacity duration-300">
             <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-start gap-3">
                 <i class="fa-regular fa-folder-open text-blue-500 mt-1"></i>
@@ -181,14 +179,11 @@
         let totalOptimizedSize = 0;
         let zip = new JSZip();
         
-        // По умолчанию агрессивный режим "как TinyPNG"
         let currentCompressMode = 'tiny'; 
 
         // Обработка клика по зоне (только по пустому месту)
         dropzone.addEventListener('click', (e) => {
-            // Если кликнули на одну из кнопок (label), то игнорируем, чтобы не было двойного открытия
             if (e.target.closest('label')) return;
-            // Иначе открываем выбор файлов
             fileInput.click();
         });
 
@@ -232,30 +227,29 @@
 
         // --- Функция Очистки (Начать заново) ---
         function clearAll() {
-            // Помечаем все файлы как удаленные, чтобы мгновенно прервать фоновую обработку
-            filesQueue.forEach(f => f.isDeleted = true);
+            filesQueue.forEach(f => {
+                f.isDeleted = true;
+                // Очищаем память от созданных ссылок для поштучного скачивания
+                if (f.objectURL) URL.revokeObjectURL(f.objectURL);
+            });
             
-            // Обнуляем переменные
             filesQueue = [];
             processedFiles = [];
             totalOriginalSize = 0;
             totalOptimizedSize = 0;
             zip = new JSZip();
             
-            // Очищаем DOM
             fileList.innerHTML = '';
             processedCountEl.textContent = '0';
             totalCountEl.textContent = '0';
             totalSavedEl.textContent = '0 B';
             
-            // Скрываем элементы
             actionArea.classList.add('hidden');
             fileListContainer.classList.add('hidden');
             downloadBtn.disabled = true;
             document.getElementById('selectAllCheckbox').checked = false;
             updateSelectionState();
             
-            // Сбрасываем inputs
             fileInput.value = '';
             folderInput.value = '';
         }
@@ -265,19 +259,21 @@
             const fileObj = filesQueue.find(f => f.uiId === id);
             if (!fileObj) return;
 
-            fileObj.isDeleted = true; // Отменяем обработку, если она еще не началась
+            fileObj.isDeleted = true;
+            
+            if (fileObj.objectURL) {
+                URL.revokeObjectURL(fileObj.objectURL); // Очищаем память
+            }
 
-            // Если файл уже обработан, вычитаем его размеры из общих счетчиков
             if (processedFiles.includes(fileObj)) {
                 totalOriginalSize -= fileObj.size;
                 totalOptimizedSize -= (fileObj.optimizedSize || fileObj.size);
 
                 let filePath = fileObj.customPath || fileObj.webkitRelativePath || fileObj.name;
                 if(filePath.startsWith('/')) filePath = filePath.substring(1);
-                zip.remove(filePath); // Удаляем из ZIP-архива
+                zip.remove(filePath); 
             }
 
-            // Удаляем строку из таблицы
             const row = document.getElementById(`row-${id}`);
             if (row) row.remove();
 
@@ -297,7 +293,7 @@
             totalSavedEl.textContent = formatBytes(savedBytes > 0 ? savedBytes : 0);
 
             if (validQueue.length === 0) {
-                clearAll(); // Если удалили всё вручную по одному — скрываем панель полностью
+                clearAll(); 
             } else if (validProcessed.length === validQueue.length) {
                 downloadBtn.disabled = false;
             } else {
@@ -425,7 +421,7 @@
             validFiles.forEach(file => {
                 const id = Math.random().toString(36).substr(2, 9);
                 file.uiId = id;
-                file.isDeleted = false; // Добавляем флаг удаления
+                file.isDeleted = false; 
                 renderFileRow(file, id);
             });
 
@@ -442,7 +438,6 @@
             while (processedFiles.length < filesQueue.length) {
                 const file = filesQueue[processedFiles.length];
                 
-                // Если пользователь удалил файл, пока тот был в очереди - пропускаем его
                 if (file.isDeleted) {
                     processedFiles.push(file);
                     continue;
@@ -470,7 +465,6 @@
             try {
                 let optimizedBlob;
                 
-                // Настройки в зависимости от выбранного режима
                 const jpegQuality = currentCompressMode === 'tiny' ? 0.75 : 0.90;
                 const pngColors = currentCompressMode === 'tiny' ? 128 : 256;
                 
@@ -480,14 +474,13 @@
                     optimizedBlob = await compressPNGWithTinyPngLogic(file, pngColors);
                 }
 
-                // Прерываем сохранение, если пользователь удалил файл во время сжатия
                 if (file.isDeleted) return;
 
                 if (optimizedBlob.size >= file.size) {
                     optimizedBlob = file;
                 }
 
-                file.optimizedSize = optimizedBlob.size; // Сохраняем финальный вес для корректного удаления потом
+                file.optimizedSize = optimizedBlob.size; 
                 totalOriginalSize += file.size;
                 totalOptimizedSize += optimizedBlob.size;
 
@@ -496,7 +489,8 @@
                 
                 zip.file(filePath, optimizedBlob);
 
-                updateRowSuccess(id, file.size, optimizedBlob.size);
+                // Передаем новый Blob и оригинальное имя файла для генерации кнопки поштучного скачивания
+                updateRowSuccess(id, file.size, optimizedBlob.size, optimizedBlob, file.name);
             } catch (error) {
                 if (file.isDeleted) return;
                 console.error("Error optimizing file:", error);
@@ -652,7 +646,8 @@
             }
         }
 
-        function updateRowSuccess(id, originalSize, newSize) {
+        // Обновленная функция: теперь генерирует персональную кнопку скачивания для файла
+        function updateRowSuccess(id, originalSize, newSize, optimizedBlob, originalName) {
             const optSizeCell = document.getElementById(`opt-size-${id}`);
             const savingCell = document.getElementById(`saving-${id}`);
             const statusCell = document.getElementById(`status-${id}`);
@@ -664,11 +659,26 @@
             
             if (savedBytes > 0) {
                 savingCell.innerHTML = `<span class="text-green-600 font-medium">-${savedPercent}%</span>`;
-                statusCell.innerHTML = `<span class="text-green-500"><i class="fa-solid fa-check-circle"></i> Готово</span>`;
             } else {
                 savingCell.innerHTML = `<span class="text-gray-400">0%</span>`;
-                statusCell.innerHTML = `<span class="text-gray-500"><i class="fa-solid fa-check-circle"></i> Без изменений</span>`;
             }
+
+            // Создаем ссылку на скачивание (и сохраняем её в объект для очистки памяти позже)
+            const fileObj = filesQueue.find(f => f.uiId === id);
+            const extension = optimizedBlob.type === 'image/jpeg' ? 'JPEG' : 'PNG';
+            let downloadUrl = '';
+            
+            if (fileObj) {
+                downloadUrl = URL.createObjectURL(optimizedBlob);
+                fileObj.objectURL = downloadUrl;
+            }
+
+            // Кнопка скачивания (В стиле TinyPNG)
+            statusCell.innerHTML = `
+                <a href="${downloadUrl}" download="${originalName}" class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 bg-teal-50 text-teal-700 hover:bg-teal-100 border border-teal-200 rounded-md text-xs font-bold transition-colors cursor-pointer" onclick="event.stopPropagation()">
+                    <i class="fa-solid fa-download"></i> ${extension}
+                </a>
+            `;
         }
 
         function formatBytes(bytes, decimals = 1) {
